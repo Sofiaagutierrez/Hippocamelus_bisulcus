@@ -1,55 +1,44 @@
-install.packages("leaflet")
+
 library("leaflet")
-install.packages("sf")
 library("sf")
-install.packages("tidyverse")
 library("tidyverse")
-install.packages("rgdal")
 library("rgdal")
-install.packages("raster")
 library("raster")
-install.packages("rasterVis")
 library("rasterVis")
-install.packages("rworldxtra")
 library("rworldxtra")
-install.packages("gdal")
-library(gdal)
-install.packages("sp")
-library(sp)
+library("rgdal")
+library("sp")
+library("ggforce")   #nombres graficos
+library("scales")   #graficos
 
 
 
-install.packages("rgdal", configure.args = c("--with-proj-lib=/usr/local/lib/", "--with-proj-include=/usr/local/include/"))
+#install.packages("rgdal", configure.args = c("--with-proj-lib=/usr/local/lib/", "--with-proj-include=/usr/local/include/"))
 
-install.packages("devtools")
-install.packages("rgeos")
+library("rgeos")
+#require(devtools)
+#install_version("gdal", version="1.1.1", repos="https://cran.r-project.org/web/packages/gdalUtilities/index.html")
+#library("gdal")
 
-require(devtools)
+#require(devtools)
+#install_version("ENMeval", version= "0.3.1",repos= "https://cran.r-project.org/web/packages/ENMeval/ENMeval.pdf")
 
-install_version("gdal", version="1.1.1", repos="https://cran.r-project.org")
+#install.packages("gdal")
+#library("gdal")
 
-require(devtools)
-install_version("ENmeval", version= "0.3.1",repos= "https://cran.r-project.org/web/packages/ENMeval/ENMeval.pdf")
-
-install.packages("gdal")
-install.packages("sp")
 
 library("sf")
 library("tidyverse")
 library("rworldxtra")
 library(broom)
 
-install.packages("rgbif")
-library (rgbif)
-install.packages("dismo")
-library(dismo)
-install.packages("ENmeval")
-library(ENMeval)
-install.packages("maxnet")
-library(maxnet) 
 
-install.packages("spocc")
-library(spocc)
+library ("rgbif")
+library("dismo")
+library("ENMeval")
+library("maxnet") 
+library("spocc")
+library("dplyr")
 
 
 # conectarse con gbif.org user
@@ -57,9 +46,13 @@ library(spocc)
 #"" # your gbif.org password email 
 #"slgutierrez@uc.cl" # your email
 
-write.table(Presencias, file="Presencias.csv")
+#write.table(Presencias, file="Presencias.csv")
 
-read.csv(file="Presencias.csv")
+#read.csv(file="Presencias.csv")
+
+#Presencias <-read.csv(file="Presencias.csv")
+
+Presencias <- read.csv("~/Documents/Presencias.csv", sep="")
 
 # obtener la data completa de gbif
 
@@ -69,14 +62,14 @@ read.csv(file="Presencias.csv")
                # hasGeospatialIssue = FALSE)
 #view(occ)
 
-Presencias <- occ$data
+#Presencias <- occ$data  #ver porque se comenta 
 
 #Filtros a presencias
 
 Presencias <- Presencias %>% dplyr::filter(!is.na(decimalLatitude), !is.na(decimalLongitude),decimalLongitude != 0, decimalLatitude !=0) %>% 
   dplyr::select(decimalLongitude, decimalLatitude)
 
-view(Presencias)
+#view(Presencias)
 
 #Transformación a SF
 
@@ -91,6 +84,7 @@ ggplot() + geom_sf(data = Chile) +
   geom_sf(data = Presencias_SF) +
   theme_bw()
 
+
 #Generar un buffer 
 
 Hull <- Presencias_SF %>% st_union() %>% st_convex_hull
@@ -101,15 +95,16 @@ plot(Buffer)
 
 #mapa de polígono
 
-Chile<- getData(name="GADM", country= "CHL", LEVEL=1  %>% st_as_sf() %>% st_make_valid() %>% st_crop(Buffer))
+Chile<- getData(name="GADM", country= "CHL", level=1)  %>% st_as_sf()  %>% st_crop(Buffer)
 
-ggplot() + geom_sf(data= Chile) + geom_sf(data= Presencias_SF)+ theme_bw()
+ggplot() + geom_sf(data = Buffer) + geom_sf(data= Chile) + geom_sf(data= Presencias_SF)  + theme_bw()
+
+# este tenía antes ver diferencia por el de arriba ggplot() + geom_sf(data= Chile) + geom_sf(data= Presencias_SF)+ theme_bw()
 
 #capas bioclimaticas 
 
 Bioclimatic <- getData(name = "worldclim", var = "bio", res = 0.5, 
                        lon = -70, lat = -50)
-
 
 ## cortar capas climaticas
 Bioclimatic <- Bioclimatic %>% crop(Buffer) %>% trim()
@@ -119,9 +114,12 @@ names(Bioclimatic) <- str_remove_all(names(Bioclimatic), "_43")
 
 plot(Bioclimatic[[c(1:4)]], colNA= "black")
 
+
 #Generacion de background
 
 #Hacer un data frame con presencias 1
+
+
 
 Pres<- Presencias %>% dplyr::filter(!is.na(decimalLatitude), !is.na(decimalLongitude),decimalLongitude != 0, decimalLatitude !=0) %>% 
   dplyr::select(decimalLongitude, decimalLatitude) %>% mutate(Pres = 1)
@@ -129,12 +127,12 @@ Pres<- Presencias %>% dplyr::filter(!is.na(decimalLatitude), !is.na(decimalLongi
 set.seed(2020) #para la reproducibilidad 
 
 bkg <- dismo::randomPoints(mask = Bioclimatic[[1]], n = 5000) %>% 
-  as.data.frame() %>% rename(longitude = x, latitude = y) %>% 
+  as.data.frame() %>% rename(decimalLongitude = x, decimalLatitude = y) %>% 
   mutate(Pres = 0)
 
 
 Pres_bkg <- bind_rows(Pres, bkg) %>% dplyr::filter(!is.na(decimalLatitude), 
-!is.na(decimalLongitude)) %>% dplyr::select(-longitude, -latitude)
+!is.na(decimalLongitude)) 
 
 view(Pres_bkg)
 
@@ -145,15 +143,68 @@ Pres_bkg_Sf <- Pres_bkg %>% st_as_sf(coords = c(1, 2),
 #Extraccion de datos 
 
 Condiciones <- raster::extract(Bioclimatic, Pres_bkg_Sf) %>% 
-  as.data.frame() %>% bind_cols(Pres_bkg)
+  as.data.frame() %>% bind_cols(Pres_bkg) 
+
+view(Condiciones)
 
 #Primer modelo
 
-Mod1 <- maxnet(p = Condiciones$Pres, data = Condiciones[, 1:19], 
-               regmult = 1, maxnet.formula(p = Condiciones$Pres, data = Condiciones[, 
-               1:19], classes = "lq"), clamp= FALSE)
+Mod1 <- maxnet(p = Condiciones$Pres, data = Condiciones [, 1:19], 
+        regmult = 1, maxnet.formula(p = Condiciones$Pres, 
+      data = Condiciones[,1:19], classes = "lqh"), clamp= F)
+
+plot(predict(Bioclimatic,Mod1, type = "cloglog"), colNA = "black", main= "Modelo de distribución actual del huemul") #poner subtitulo 
 
 
+#respuestas de variables 
 
 
+plot(Mod1, type= "cloglog",  c("bio1", "bio2", "bio3"))
 
+Prediction <- predict(Bioclimatic, Mod1, type = "cloglog")
+
+plot(Prediction, colNA= "black")
+
+#Transformar en presencia y ausencia (ya que eso es lo que tratamos de predecir)
+
+Eval <- dismo::evaluate(p = Pres[, 1:2], a = bkg [, 1:2], model = Mod1, 
+                        x = Bioclimatic, type = "cloglog")
+
+EvalDF <- Eval@confusion %>% as.data.frame %>% mutate(Threshold = Eval@t) %>% 
+mutate(TP_TN = (tp/nrow(Presencias)) + (tn/5000))
+head(EvalDF) 
+
+#generacion de data frame
+Eval@confusion
+
+view(EvalDF)
+
+#Prediction
+
+EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
+
+view(EvalThres)
+
+Prediction <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>% mutate(Binary = ifelse(layer >= 
+                      EvalThres$Threshold, "Presencias", "bkg"))
+#ver
+ 
+view(Prediction)
+
+#hacer gráfico de esto (ver nuevamente clase 5)
+
+plot(Prediction)
+
+plot(Prediction, colNA= "black")
+
+plot(EvalThres, colNA= "black")
+
+
+#Seleccionando el mejor modelo 
+
+Results <- ENMevaluate(occ = Presencias [, c(3, 2)], env = Bioclimatic, 
+                       RMvalues = c(0.75, 1, 1.25), n.bg = 5000, method = "randomkfold", 
+                       overlap = F, kfolds = 5, bin.output = T, fc = c("L", "LQ", 
+                                                                       "LQH"), rasterPreds = T)
+
+#despues armar grafico de la predicción
