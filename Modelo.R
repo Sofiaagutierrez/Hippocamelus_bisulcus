@@ -30,7 +30,7 @@ library("rgeos")
 library("sf")
 library("tidyverse")
 library("rworldxtra")
-library(broom)
+library("broom")
 
 
 library ("rgbif")
@@ -119,8 +119,6 @@ plot(Bioclimatic[[c(1:4)]], colNA= "black")
 
 #Hacer un data frame con presencias 1
 
-
-
 Pres<- Presencias %>% dplyr::filter(!is.na(decimalLatitude), !is.na(decimalLongitude),decimalLongitude != 0, decimalLatitude !=0) %>% 
   dplyr::select(decimalLongitude, decimalLatitude) %>% mutate(Pres = 1)
 
@@ -153,7 +151,8 @@ Mod1 <- maxnet(p = Condiciones$Pres, data = Condiciones [, 1:19],
         regmult = 1, maxnet.formula(p = Condiciones$Pres, 
       data = Condiciones[,1:19], classes = "lqh"), clamp= F)
 
-plot(predict(Bioclimatic,Mod1, type = "cloglog"), colNA = "black", main= "Modelo de distribución actual del huemul") #poner subtitulo 
+plot(predict(Bioclimatic,Mod1, type = "cloglog"), colNA = "black",
+     main= "Modelo de distribución actual del huemul") 
 
 
 #respuestas de variables 
@@ -163,7 +162,9 @@ plot(Mod1, type= "cloglog",  c("bio1", "bio2", "bio3"))
 
 Prediction <- predict(Bioclimatic, Mod1, type = "cloglog")
 
-plot(Prediction, colNA= "black")
+
+plot(Prediction, colNA= "white")
+
 
 #Transformar en presencia y ausencia (ya que eso es lo que tratamos de predecir)
 
@@ -185,26 +186,25 @@ EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
 
 view(EvalThres)
 
-Prediction <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>% mutate(Binary = ifelse(layer >= 
-                      EvalThres$Threshold, "Presencias", "bkg"))
-#ver
+#ver lo siguiente me da error
+
+ Prediction <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>% mutate(Binary = ifelse(layer >= 
+                                                  EvalThres$Threshold,  "Presencia", "Ausencia"))
  
-view(Prediction)
+ 
+ #este me resulta
+ 
+ Prediction <- Prediction %>% mutate(Binary = ifelse(layer >= 
+                             EvalThres$Threshold, "Pres", "bkg"))
 
-#hacer gráfico de esto (ver nuevamente clase 5)
+#hacer gráfico Modelo del Presente
 
-plot(Prediction)
+ 
+Prediction <- predict(Bioclimatic, Mod1, type = "cloglog")
 
 plot(Prediction, colNA= "black")
 
-plot(EvalThres, colNA= "black")
 
 
-#Seleccionando el mejor modelo 
 
-Results <- ENMevaluate(occ = Presencias [, c(3, 2)], env = Bioclimatic, 
-                       RMvalues = c(0.75, 1, 1.25), n.bg = 5000, method = "randomkfold", 
-                       overlap = F, kfolds = 5, bin.output = T, fc = c("L", "LQ", 
-                                                                       "LQH"), rasterPreds = T)
 
-#despues armar grafico de la predicción
