@@ -10,7 +10,8 @@ library("rgdal")
 library("sp")
 library("ggforce")   #nombres graficos
 library("scales")   #graficos
-
+install.packages("prediction")
+library("prediction")
 
 
 #install.packages("rgdal", configure.args = c("--with-proj-lib=/usr/local/lib/", "--with-proj-include=/usr/local/include/"))
@@ -99,8 +100,6 @@ Chile<- getData(name="GADM", country= "CHL", level=1)  %>% st_as_sf()  %>% st_cr
 
 ggplot() + geom_sf(data = Buffer) + geom_sf(data= Chile) + geom_sf(data= Presencias_SF)  + theme_bw()
 
-# este tenía antes ver diferencia por el de arriba ggplot() + geom_sf(data= Chile) + geom_sf(data= Presencias_SF)+ theme_bw()
-
 #capas bioclimaticas 
 
 Bioclimatic <- getData(name = "worldclim", var = "bio", res = 0.5, 
@@ -179,30 +178,121 @@ head(EvalDF)
 Eval@confusion
 
 view(EvalDF)
+EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
+view(EvalThres)
 
 #Prediction
 
-EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
+#umbral 1
 
-view(EvalThres)
+ Prediction_DF <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>%
+   mutate(Binary = ifelse(layer >=  EvalThres$Threshold [1],  "Presencia", "Ausencia"))
 
-#ver lo siguiente me da error
-
- Prediction <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>% mutate(Binary = ifelse(layer >= 
-                                                  EvalThres$Threshold,  "Presencia", "Ausencia"))
+ #umbral 2
+  
+Prediction_DF2 <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>% mutate(Binary1 = ifelse(layer >= 
+  EvalThres$Threshold[1],  "Presencia", "Ausencia"), Binary2 =ifelse(layer >= 
+  EvalThres$Threshold[2],  "Presencia", "Ausencia")) %>% 
+  pivot_longer(starts_with("Binary"), names_to ="Umbral", values_to = "Presencia")   #esto ultimo es para hacer un buen grafico
  
  
- #este me resulta
- 
- Prediction <- Prediction %>% mutate(Binary = ifelse(layer >= 
-                             EvalThres$Threshold, "Pres", "bkg"))
+#Graficos  presente 
 
-#hacer gráfico Modelo del Presente
+#ver si funciona y cambiar escala de colores, cambiar detalles, white por black
+ggplot() + geom_raster(data = Prediction_DF, aes(x = latitud, y = longitud, fill = Binary)) +
+  geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) +
+  scale_fill_viridis_d() + labs(x = NULL, y = NULL)
 
- 
-Prediction <- predict(Bioclimatic, Mod1, type = "cloglog")
+Binary #grafico de ambos umbrales
+ggplot() + geom_raster(data = Prediction_DF2, aes(x = x, y = y, fill = Presencia)) +
+  geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) +
+  scale_fill_viridis_d() + labs(x = NULL, y = NULL) +
+  facet_wrap(~Umbral)
 
-plot(Prediction, colNA= "black")
+
+#Transformacion raster en Pres Aus
+#transformacion de raster en prediccion binaria 
+
+
+Prediction_Bin <- Prediction
+
+#ocupar funcion reclassify, para eso debo armar una matriz
+
+m <- c(-Inf, EvalThres$Threshold[1], 0, EvalThres$Threshold[1], Inf, 1)
+m <- matrix(m, ncol =3, byrow = T) #transformacion a matriz desde puntos de raster
+
+Prediction_Bin <- reclassify(Prediction_Bin, m) #esto es lo mismo que lo anterior, pero la diferencia es que el anterior es un raster y este es un data frame 
+
+plot(Prediction_Bin, colNA= "black") #hacer mas lindo
+
+#Modelando el futuro 
+
+install.packages("readxl")
+library("readxl")
+install.packages("xlsx")
+library("xlsx")
+
+#Futuros <- read_excel("GcmR.xlsx") #no me funciona, error path does not exist
+
+
+Futuros <- read.csv("~/Documents/GCMR.csv", sep="") #resulta
+
+
+#Futuros$Within_circle <- c(Futuros$Within_circle[-1], NA)
+
+#Futuros <- Futuros %>% 
+  #dplyr::filter(!is.na(Within_circle), Within_circle == "TRUE") %>% #sacar esta linea
+  
+
+Futuros <- Futuros %>% mutate(Cuadrante = case_when(x_axis >= 0 & y_axis >= 0 ~ "I",
+                                                  x_axis < 0 & y_axis >= 0 ~ "II",
+                                                  x_axis < 0 & y_axis < 0 ~ "III",
+                                                  x_axis >= 0 & y_axis < 0 ~ "IV"))
+
+
+#Elección de futuros (escoger 1 por cada cuadrante)
+
+Futuros <- Futuros %>% group_split(Cuadrante)
+
+
+#Modelo Miroc
+
+Miroc <- getData('CMIP5', var='bio', res=2.5, rcp=85, model='MI', year=70) %>% 
+  crop(Bioclimatic)
+
+names(Miroc) <- names(Bioclimatic)
+
+Prediction_Miroc <- predict(Miroc, Mod1, type = "cloglog")
+
+Prediction_Bin_Miroc <- Prediction_Miroc
+
+m <- c(-Inf, EvalThres$Threshold[1], 0, EvalThres$Threshold[1], Inf, 1)
+m <- matrix(m, ncol =3, byrow = T) 
+
+Prediction_Bin_Miroc <- reclassify(Prediction_Bin_Miroc, m)
+Prediction_Bin_Miroc <- resample(Prediction_Bin_Miroc, Prediction_Bin, method = "ngb")
+
+
+#Modelo gfdl 
+
+
+gfdl <- getData('CMIP5', var='bio', res=2.5, rcp=85, model='GF', year=70) %>% 
+  crop(Bioclimatic)
+
+names(gfdl) <- names(Bioclimatic)
+
+Prediction_gfdl <- predict(gfdl, Mod1, type = "cloglog")
+
+Prediction_Bin_gfdl <- Prediction_gfdl
+Prediction_Bin_gfdl <- resample(Prediction_Bin_gfdl, Prediction_Bin, method = "ngb")
+
+m <- c(-Inf, EvalThres$Threshold[1], 0, EvalThres$Threshold[1], Inf, 1)
+m <- matrix(m, ncol =3, byrow = T) 
+
+Prediction_Bin_gfdl <- reclassify(Prediction_Bin_gfdl, m)
+
+
+
 
 
 
