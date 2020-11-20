@@ -192,10 +192,10 @@ EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
 
  #umbral 2
   
-Prediction_DF2 <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>% mutate(Binary1 = ifelse(layer >= 
-  EvalThres$Threshold[1],  "Presencia", "Ausencia"), Binary2 =ifelse(layer >= 
-  EvalThres$Threshold[2],  "Presencia", "Ausencia")) %>% 
-  pivot_longer(starts_with("Binary"), names_to ="Umbral", values_to = "Presencia")   #esto ultimo es para hacer un buen grafico
+#Prediction_DF2 <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>% mutate(Binary1 = ifelse(layer >= 
+#EvalThres$Threshold[1],  "Presencia", "Ausencia"), Binary2 =ifelse(layer >= 
+#EvalThres$Threshold[2],  "Presencia", "Ausencia")) %>% 
+#pivot_longer(starts_with("Binary"), names_to ="Umbral", values_to = "Presencia")   #esto ultimo es para hacer un buen grafico
  
  
 #Graficos  presente 
@@ -375,15 +375,18 @@ Prediction_Bin_Cesm<- resample(Prediction_Bin_Cesm, Prediction_Bin, method = "ng
 #Graficos
 
 par(mfrow =c(1,5))
-plot(Prediction_Bin, main= "Presente", colNA= "black", xlab= "Lat", ylab= "Long", scale_fill_viridis_d())
+plot(Prediction_Bin, main= "Presente", colNA= "black", xlab= "Lat", ylab= "Long")
 plot(Prediction_Bin_Gfdl, main= "Gfdl", colNA= "black", xlab= "Lat", ylab= "Long")
 plot(Prediction_Bin_Ipsl, main= "Ipsl", colNA= "black", xlab= "Lat", ylab= "Long")
 plot(Prediction_Bin_Miroc, main= "Miroc",colNA= "black", xlab= "Lat", ylab= "Long")
 plot(Prediction_Bin_Cesm, main= "Cesm", colNA= "black", xlab= "Lat", ylab= "Long")
 
-scale_fill_viridis_d() 
 
+#Graficos superpuestos
 
-
-
-
+plot(Prediction_Bin + Prediction_Bin_Ipsl + Prediction_Bin_Gfdl + Prediction_Bin_Miroc + Prediction_Bin_Cesm ,colNA= "black", xlab= "Lat", ylab= "Long")
+ 
+                                                                                                           
+ 
+                                                                         
+                                                                                                                                                                                        
