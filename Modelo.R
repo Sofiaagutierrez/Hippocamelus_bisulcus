@@ -4,13 +4,14 @@ library("sf")
 library("tidyverse")
 library("rgdal")
 library("raster")
+library("lattice")
+library("latticeExtra")
 library("rasterVis")
 library("rworldxtra")
 library("rgdal")
 library("sp")
 library("ggforce")   #nombres graficos
 library("scales")   #graficos
-install.packages("prediction")
 library("prediction")
 
 
@@ -55,6 +56,8 @@ library("dplyr")
 
 Presencias <- read.csv("~/Documents/Presencias.csv", sep="")
 
+#view(Presencias)
+
 # obtener la data completa de gbif
 
 #occ <- occ_data(scientificName = 'Hippocamelus bisulcus', 
@@ -81,7 +84,7 @@ Presencias_SF <-  Presencias %>% st_as_sf(coords  = c(1,2), crs = "+proj=longlat
 Chile <- getData(name = "GADM", country = "CHL", level = 1) %>% st_as_sf() %>% 
   st_crop(Presencias_SF)
 
-ggplot() + geom_sf(data = Chile) +
+#ggplot() + geom_sf(data = Chile) +
   geom_sf(data = Presencias_SF) +
   theme_bw()
 
@@ -92,13 +95,13 @@ Hull <- Presencias_SF %>% st_union() %>% st_convex_hull
 
 Buffer <- Hull %>% st_buffer(dist = 1) %>% st_as_sf()
 
-plot(Buffer)
+#plot(Buffer)
 
 #mapa de polígono
 
 Chile<- getData(name="GADM", country= "CHL", level=1)  %>% st_as_sf()  %>% st_crop(Buffer)
 
-ggplot() + geom_sf(data = Buffer) + geom_sf(data= Chile) + geom_sf(data= Presencias_SF)  + theme_bw()
+#ggplot() + geom_sf(data = Buffer) + geom_sf(data= Chile) + geom_sf(data= Presencias_SF)  + theme_bw()
 
 #capas bioclimaticas 
 
@@ -111,7 +114,7 @@ Bioclimatic <- Bioclimatic %>% crop(Buffer) %>% trim()
 ## Cortamos el Tile
 names(Bioclimatic) <- str_remove_all(names(Bioclimatic), "_43")
 
-plot(Bioclimatic[[c(1:4)]], colNA= "black")
+#plot(Bioclimatic[[c(1:4)]], colNA= "black")
 
 
 #Generacion de background
@@ -131,7 +134,7 @@ bkg <- dismo::randomPoints(mask = Bioclimatic[[1]], n = 5000) %>%
 Pres_bkg <- bind_rows(Pres, bkg) %>% dplyr::filter(!is.na(decimalLatitude), 
 !is.na(decimalLongitude)) 
 
-view(Pres_bkg)
+#view(Pres_bkg)
 
 Pres_bkg_Sf <- Pres_bkg %>% st_as_sf(coords = c(1, 2),
             crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0")  
@@ -142,7 +145,7 @@ Pres_bkg_Sf <- Pres_bkg %>% st_as_sf(coords = c(1, 2),
 Condiciones <- raster::extract(Bioclimatic, Pres_bkg_Sf) %>% 
   as.data.frame() %>% bind_cols(Pres_bkg) 
 
-view(Condiciones)
+#view(Condiciones)
 
 #Primer modelo
 
@@ -150,19 +153,18 @@ Mod1 <- maxnet(p = Condiciones$Pres, data = Condiciones [, 1:19],
         regmult = 1, maxnet.formula(p = Condiciones$Pres, 
       data = Condiciones[,1:19], classes = "lqh"), clamp= F)
 
-plot(predict(Bioclimatic,Mod1, type = "cloglog"), colNA = "black",
-     main= "Modelo de distribución actual del huemul") 
+#plot(predict(Bioclimatic,Mod1, type = "cloglog"), colNA = "black", main= "Modelo de distribución actual del huemul") 
 
 
 #respuestas de variables 
 
 
-plot(Mod1, type= "cloglog",  c("bio1", "bio2", "bio3"))
+#plot(Mod1, type= "cloglog",  c("bio1", "bio2", "bio3"))
 
 Prediction <- predict(Bioclimatic, Mod1, type = "cloglog")
 
 
-plot(Prediction, colNA= "white")
+#plot(Prediction, colNA= "white")
 
 
 #Transformar en presencia y ausencia (ya que eso es lo que tratamos de predecir)
@@ -177,9 +179,9 @@ head(EvalDF)
 #generacion de data frame
 Eval@confusion
 
-view(EvalDF)
+#view(EvalDF)
 EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
-view(EvalThres)
+#view(EvalThres)
 
 #Prediction
 
@@ -199,15 +201,10 @@ Prediction_DF2 <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame(
 #Graficos  presente 
 
 #ver si funciona y cambiar escala de colores, cambiar detalles, white por black
-ggplot() + geom_raster(data = Prediction_DF, aes(x = latitud, y = longitud, fill = Binary)) +
-  geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) +
-  scale_fill_viridis_d() + labs(x = NULL, y = NULL)
+#ggplot() + geom_raster(data = Prediction_DF, aes(x = latitud, y = longitud, fill = Binary)) + geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) + scale_fill_viridis_d() + labs(x = NULL, y = NULL)
 
-Binary #grafico de ambos umbrales
-ggplot() + geom_raster(data = Prediction_DF2, aes(x = x, y = y, fill = Presencia)) +
-  geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) +
-  scale_fill_viridis_d() + labs(x = NULL, y = NULL) +
-  facet_wrap(~Umbral)
+#Binary #grafico de ambos umbrales
+#ggplot() + geom_raster(data = Prediction_DF2, aes(x = x, y = y, fill = Presencia)) +geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) +scale_fill_viridis_d() + labs(x = NULL, y = NULL) +facet_wrap(~Umbral)
 
 
 #Transformacion raster en Pres Aus
@@ -223,23 +220,26 @@ m <- matrix(m, ncol =3, byrow = T) #transformacion a matriz desde puntos de rast
 
 Prediction_Bin <- reclassify(Prediction_Bin, m) #esto es lo mismo que lo anterior, pero la diferencia es que el anterior es un raster y este es un data frame 
 
-plot(Prediction_Bin, colNA= "black") #hacer mas lindo
+#plot(Prediction_Bin, colNA= "black") #hacer mas lindo
 
 #Modelando el futuro 
 
-install.packages("readxl")
 library("readxl")
-install.packages("xlsx")
 library("xlsx")
+library("csvread")
 
-#Futuros <- read_excel("GcmR.xlsx") #no me funciona, error path does not exist
 
+#Futuros <- read_excel("~/Documents/GcmR.xlsx") #ahora me funciona
+view(GCMR)
 
-Futuros <- read.csv("~/Documents/GCMR.csv", sep="") #resulta
+#Futuros <- csvread("~/Documents/GCMR.csv", coltypes = "longhex", header= TRUE) #resulta
 
+#Futuros <- read.csv("~/Documents/GCMR.csv", sep="")
+
+Futuros <- GCMR
+#view(Futuros)
 
 #Futuros$Within_circle <- c(Futuros$Within_circle[-1], NA)
-
 #Futuros <- Futuros %>% 
   #dplyr::filter(!is.na(Within_circle), Within_circle == "TRUE") %>% #sacar esta linea
   
@@ -247,22 +247,90 @@ Futuros <- read.csv("~/Documents/GCMR.csv", sep="") #resulta
 Futuros <- Futuros %>% mutate(Cuadrante = case_when(x_axis >= 0 & y_axis >= 0 ~ "I",
                                                   x_axis < 0 & y_axis >= 0 ~ "II",
                                                   x_axis < 0 & y_axis < 0 ~ "III",
-                                                  x_axis >= 0 & y_axis < 0 ~ "IV"))
+                                                 x_axis >= 0 & y_axis < 0 ~ "IV"))
+#view(Futuros)
 
 
 #Elección de futuros (escoger 1 por cada cuadrante)
 
 Futuros <- Futuros %>% group_split(Cuadrante)
 
+#Modelo 1
 
-#Modelo Miroc
+Futuros[[1]] %>% View()
+
+Ipsl <- getData('CMIP5', var='bio', res=2.5, rcp=85, model='IP', year=70) %>% 
+  crop(Bioclimatic)
+
+#plot(Ipsl)
+
+names(Ipsl) <- names(Bioclimatic)
+
+#plot(Ipsl)
+
+Prediction_Ipsl <- predict(Ipsl, Mod1, type = "cloglog")
+
+#plot(Prediction_Ipsl) #mejorar
+
+#Transformar en presencia ausencia
+
+Prediction_Bin_Ipsl <- Prediction_Ipsl
+
+m <- c(-Inf, EvalThres$Threshold[1], 0, EvalThres$Threshold[1], Inf, 1)
+m <- matrix(m, ncol =3, byrow = T) 
+
+Prediction_Bin_Ipsl <- reclassify(Prediction_Bin_Ipsl, m)
+Prediction_Bin_Ipsl <- resample(Prediction_Bin_Ipsl, Prediction_Bin, method = "ngb")
+
+#plot(Prediction_Bin_Ipsl) #mejorar grafico, ver que escala quede 1 y 0 (dos colores) agregar gráfico de columnas al final 
+
+#Modelo 2
+
+Futuros[[2]] %>% View()
+
+Gfdl <- getData('CMIP5', var='bio', res=2.5, rcp=85, model='GF', year=70) %>% 
+  crop(Bioclimatic)
+
+#plot(Gfdl)
+
+names(Gfdl) <- names(Bioclimatic)
+
+#plot(Gfdl)
+
+Prediction_Gfdl <- predict(Gfdl, Mod1, type = "cloglog")
+
+#plot(Prediction_Gfdl) #mejorar
+
+#Transformar en presencia ausencia
+
+Prediction_Bin_Gfdl <- Prediction_Gfdl
+
+m <- c(-Inf, EvalThres$Threshold[1], 0, EvalThres$Threshold[1], Inf, 1)
+m <- matrix(m, ncol =3, byrow = T) 
+
+Prediction_Bin_Gfdl <- reclassify(Prediction_Bin_Gfdl, m)
+Prediction_Bin_Gfdl<- resample(Prediction_Bin_Gfdl, Prediction_Bin, method = "ngb")
+
+#plot(Prediction_Bin_Gfdl) #mejorar grafico, ver que escala quede 1 y 0 (dos colores) agregar gráfico de columnas al final 
+
+#Modelo 3
+
+Futuros[[3]] %>% View()
 
 Miroc <- getData('CMIP5', var='bio', res=2.5, rcp=85, model='MI', year=70) %>% 
   crop(Bioclimatic)
 
+#plot(Miroc)
+
 names(Miroc) <- names(Bioclimatic)
 
+#plot(Miroc)
+
 Prediction_Miroc <- predict(Miroc, Mod1, type = "cloglog")
+
+#plot(Prediction_Miroc) #mejorar
+
+#Transformar en presencia ausencia
 
 Prediction_Bin_Miroc <- Prediction_Miroc
 
@@ -272,27 +340,48 @@ m <- matrix(m, ncol =3, byrow = T)
 Prediction_Bin_Miroc <- reclassify(Prediction_Bin_Miroc, m)
 Prediction_Bin_Miroc <- resample(Prediction_Bin_Miroc, Prediction_Bin, method = "ngb")
 
+#plot(Prediction_Bin_Miroc) #mejorar grafico, ver que escala quede 1 y 0 (dos colores) agregar gráfico de columnas al final 
 
-#Modelo gfdl 
+#Modelo 4 
 
+Futuros[[4]] %>% View()
 
-gfdl <- getData('CMIP5', var='bio', res=2.5, rcp=85, model='GF', year=70) %>% 
+Cesm<- getData('CMIP5', var='bio', res=2.5, rcp=85, model='CC', year=70) %>% 
   crop(Bioclimatic)
 
-names(gfdl) <- names(Bioclimatic)
+#plot(Cesm)
 
-Prediction_gfdl <- predict(gfdl, Mod1, type = "cloglog")
+names(Cesm) <- names(Bioclimatic)
 
-Prediction_Bin_gfdl <- Prediction_gfdl
-Prediction_Bin_gfdl <- resample(Prediction_Bin_gfdl, Prediction_Bin, method = "ngb")
+#plot(Miroc)
+
+Prediction_Cesm <- predict(Cesm, Mod1, type = "cloglog")
+
+#plot(Prediction_Cesm) #mejorar
+
+#Transformar en presencia ausencia
+
+Prediction_Bin_Cesm <- Prediction_Cesm
 
 m <- c(-Inf, EvalThres$Threshold[1], 0, EvalThres$Threshold[1], Inf, 1)
 m <- matrix(m, ncol =3, byrow = T) 
 
-Prediction_Bin_gfdl <- reclassify(Prediction_Bin_gfdl, m)
+Prediction_Bin_Cesm <- reclassify(Prediction_Bin_Cesm, m)
+Prediction_Bin_Cesm<- resample(Prediction_Bin_Cesm, Prediction_Bin, method = "ngb")
+
+#plot(Prediction_Bin_Cesm) #mejorar grafico, ver que escala quede 1 y 0 (dos colores) agregar gráfico de columnas al final 
 
 
+#Graficos
 
+par(mfrow =c(1,5))
+plot(Prediction_Bin, main= "Presente", colNA= "black", xlab= "Lat", ylab= "Long", scale_fill_viridis_d())
+plot(Prediction_Bin_Gfdl, main= "Gfdl", colNA= "black", xlab= "Lat", ylab= "Long")
+plot(Prediction_Bin_Ipsl, main= "Ipsl", colNA= "black", xlab= "Lat", ylab= "Long")
+plot(Prediction_Bin_Miroc, main= "Miroc",colNA= "black", xlab= "Lat", ylab= "Long")
+plot(Prediction_Bin_Cesm, main= "Cesm", colNA= "black", xlab= "Lat", ylab= "Long")
+
+scale_fill_viridis_d() 
 
 
 
