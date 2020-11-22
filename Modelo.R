@@ -189,6 +189,7 @@ EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
 
  Prediction_DF <- Prediction %>% as("SpatialPixelsDataFrame") %>% as.data.frame() %>%
    mutate(Binary = ifelse(layer >=  EvalThres$Threshold [1],  "Presencia", "Ausencia"))
+ view(Prediction_DF)
 
  #umbral 2
   
@@ -201,7 +202,7 @@ EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
 #Graficos  presente 
 
 #ver si funciona y cambiar escala de colores, cambiar detalles, white por black
-#ggplot() + geom_raster(data = Prediction_DF, aes(x = latitud, y = longitud, fill = Binary)) + geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) + scale_fill_viridis_d() + labs(x = NULL, y = NULL)
+#ggplot() + geom_raster(data = Prediction_DF, aes(x = x, y = y, fill = Binary)) + geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) + scale_fill_viridis_d() + labs(x = NULL, y = NULL)
 
 #Binary #grafico de ambos umbrales
 #ggplot() + geom_raster(data = Prediction_DF2, aes(x = x, y = y, fill = Presencia)) +geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) +scale_fill_viridis_d() + labs(x = NULL, y = NULL) +facet_wrap(~Umbral)
@@ -375,18 +376,68 @@ Prediction_Bin_Cesm<- resample(Prediction_Bin_Cesm, Prediction_Bin, method = "ng
 #Graficos
 
 par(mfrow =c(1,5))
-plot(Prediction_Bin, main= "Presente", colNA= "black", xlab= "Lat", ylab= "Long")
+plot(Prediction_Bin, main= "Presente", colNA= "black", xlab= "Lat", ylab= "Long", Class= as("SpatialPixelsDataFrame"))
 plot(Prediction_Bin_Gfdl, main= "Gfdl", colNA= "black", xlab= "Lat", ylab= "Long")
 plot(Prediction_Bin_Ipsl, main= "Ipsl", colNA= "black", xlab= "Lat", ylab= "Long")
 plot(Prediction_Bin_Miroc, main= "Miroc",colNA= "black", xlab= "Lat", ylab= "Long")
 plot(Prediction_Bin_Cesm, main= "Cesm", colNA= "black", xlab= "Lat", ylab= "Long")
 
 
+ggplot() + geom_raster(data = Prediction_Bin_DF, aes(x = x, y = y, fill = "Binary")) + geom_sf(data = Chile, alpha = 0, color = "white", size = 0.5) + scale_fill_viridis_d() + labs(x = NULL, y = NULL)
+
+Prediction_Bin_DF <- as.data.frame(Prediction_Bin, xy= TRUE)
+
+
 #Graficos superpuestos
 
 plot(Prediction_Bin + Prediction_Bin_Ipsl + Prediction_Bin_Gfdl + Prediction_Bin_Miroc + Prediction_Bin_Cesm ,colNA= "black", xlab= "Lat", ylab= "Long")
  
-                                                                                                           
+install.packages("prioritizr", repos = "https://cran.rstudio.com/")  
+install.packages("prioritizr", repos = "https://cran.rstudio.com/")
+
+
  
-                                                                         
+#Tratar de hacer el corredor
+
+
+install.packages("prioritizr", repos = "https://cran.rstudio.com/")
+library("prioritizr")
+
+install.packages('/Library/gurobi910/mac64/R/gurobi_9.1-0_R_4.0.2.tgz', repos=NULL)
+
+install.packages("slam", repos = "https://cloud.r-project.org")
+library("slam")
+
+library("gurobi")
+
+
+#operación para saber si la instalación de gurobi funciona
+
+model <- list()
+model$obj        <- c(1, 1, 2)
+model$modelsense <- "max"
+model$rhs        <- c(4, 1)
+model$sense      <- c("<", ">")
+model$vtype      <- "B"
+model$A          <- matrix(c(1, 2, 3, 1, 1, 0), nrow = 2, ncol = 3,
+                           byrow = TRUE)
+
+# solve the optimization problem using Gurobi
+result <- gurobi(model, list())
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                       
                                                                                                                                                                                         
