@@ -181,7 +181,7 @@ Eval@confusion
 
 #view(EvalDF)
 EvalThres <- EvalDF %>% dplyr::filter(TP_TN == max(TP_TN))
-#view(EvalThres)
+view(EvalThres)
 
 #Prediction
 
@@ -391,7 +391,42 @@ Prediction_Bin_DF <- as.data.frame(Prediction_Bin, xy= TRUE)
 #Graficos superpuestos
 
 plot(Prediction_Bin + Prediction_Bin_Ipsl + Prediction_Bin_Gfdl + Prediction_Bin_Miroc + Prediction_Bin_Cesm ,colNA= "black", xlab= "Lat", ylab= "Long")
- 
+
+#Consenso
+
+Consenso <- Prediction_Bin + Prediction_Bin_Ipsl + Prediction_Bin_Gfdl + Prediction_Bin_Miroc + Prediction_Bin_Cesm
+
+plot(Consenso)
+
+
+m <-c(-Inf, 4.9 , 0, 4.9, Inf, 1)
+m <- matrix(m, ncol =3, byrow = T) 
+
+Consenso <- reclassify (Consenso, m)
+
+head(Consenso)
+
+
+Consenso_DF <- Consenso %>% as("SpatialPixelsDataFrame") %>% 
+  as.data.frame() %>% mutate(Presencia == ifelse(layer == 1, "Consenso", "Ausencia" ))
+
+head(Consenso_DF)
+
+
+
+plot (Consenso, colNA= "black") #hacer plot con sf más fácil para cambiar escala 
+
+#Raster función área, para calculo de área
+
+Area <- area(Consenso)
+
+plot(Area) #cada celda tiene un área diferente 
+
+Area2 <- Area*Consenso
+
+Area_Total <- cellStats(Area2, sum) #suma valores de todas las celdas. 
+
+
 install.packages("prioritizr", repos = "https://cran.rstudio.com/")  
 install.packages("prioritizr", repos = "https://cran.rstudio.com/")
 
